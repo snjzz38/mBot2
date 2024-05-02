@@ -37,6 +37,22 @@ def follow_the_line(num):
     mbot2.drive_power(0, 0)
     cyberpi.console.println(step)
 
+def get_grid_distance(distance):
+    if distance == 300.0 or (distance > 0 and distance < 25.6):
+        return 0
+    elif distance > 25.6 and distance < 61.8:
+        return 1
+    elif distance > 61.8 and distance < 98:
+        return 2
+    elif distance > 98 and distance < 134.2:
+        return 3
+    elif distance > 134.2 and distance < 170.4:
+        return 4
+    elif distance > 170.4 and distance < 206.6:
+        return 5
+    else:
+        return -1
+
 @event.start
 def on_start():
     cyberpi.console.println('A to start')
@@ -53,10 +69,11 @@ def b_is_pressed():
     cyberpi.stop_other()
     cyberpi.console.println('Stop Line Follower...')
     cyberpi.mbot2.drive_power(0, 0)
-    h = mbuild.ultrasonic2.get(1)
-    cyberpi.console.println(h)
-    mbot2.turn(90)
-    v = mbuild.ultrasonic2.get(1)
-    cyberpi.console.println(v)
+    h_distance = get_grid_distance(mbuild.ultrasonic2.get(1))
+    cyberpi.console.println(h_distance)
+    mbot2.turn(90) 
+    v_distance = get_grid_distance(mbuild.ultrasonic2.get(1))
+    cyberpi.console.println(v_distance)
     mbot2.turn(-90)
+
 
