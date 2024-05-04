@@ -7,10 +7,9 @@ target = 4
 path = [(0,0), (1,0), (1,3), (3,3), (3,2), (4,2), (4,3), (5,3)]
 direction = 0
 
-def back_to_base(route):
+def back_to_base(path):
     global direction 
-    route = route[::-1]
-    steps = []
+    route = path[::-1]
     for i in range(len(route)-1):
         if route[i][0] == route[i+1][0]:
             diff = abs(route[i][1] - route[i+1][1])
@@ -19,8 +18,9 @@ def back_to_base(route):
                     mbot2.turn(90)
                 elif direction == 1:
                     mbot2.turn(-90)
-                elif direction == 3:
+                elif direction == 2:
                     mbot2.turn(180)
+                direction = 3
             elif route[i][1] > route[i+1][1]:
                 if direction == 0:
                     mbot2.turn(-90)
@@ -28,10 +28,11 @@ def back_to_base(route):
                     mbot2.turn(90)
                 elif direction == 3:
                     mbot2.turn(180)
-                follow_the_line(diff)
+                direction = 2
+            follow_the_line(diff)
         
         elif route[i][1] == route[i+1][1]:
-            diff = abs(route[i][1] - route[i+1][1])
+            diff = abs(route[i][0] - route[i+1][0])
             if route[i][0] < route[i+1][0]:
                 if direction == 1:
                     mbot2.turn(180)
@@ -39,6 +40,7 @@ def back_to_base(route):
                     mbot2.turn(90)
                 elif direction == 3:
                     mbot2.turn(-90)
+                direction = 0
             elif route[i][0] > route[i+1][0]:
                 if direction == 0:
                     mbot2.turn(180)
@@ -46,9 +48,9 @@ def back_to_base(route):
                     mbot2.turn(-90)
                 elif direction == 3:
                     mbot2.turn(90)
-    
-print(path[::-1])
-back_to_base(path)
+                direction = 1
+            cyberpi.console.println(diff)
+            follow_the_line(diff)
 
 def follow_the_line(num):
     sensor = 0
@@ -83,7 +85,13 @@ def follow_the_line(num):
     mbot2.drive_power(0, 0)
     cyberpi.console.println(step)
 
-def get_grid_distance(distance):
+def get_grid_distance():
+    distance = mbuild.ultrasonic2.get(1)
+    if distance == 300.0:
+        mbot2.straight(-8)
+        distance = mbuild.ultrasonic2.get(1)
+        mbot2.straight(8)
+    cyberpi.console.println(distance)   
     if distance > 0 and distance < 25.6:
         return 0
     elif distance > 25.6 and distance < 61.8:
@@ -115,10 +123,10 @@ def b_is_pressed():
     cyberpi.stop_other()
     cyberpi.console.println('Stop Line Follower...')
     cyberpi.mbot2.drive_power(0, 0)
-    h_distance = get_grid_distance(mbuild.ultrasonic2.get(1))
+    h_distance = get_grid_distance()
     cyberpi.console.println(h_distance)
     mbot2.turn(90)
-    v_distance = get_grid_distance(mbuild.ultrasonic2.get(1))
+    v_distance = get_grid_distance()
     cyberpi.console.println(v_distance)
     mbot2.turn(-90)
 
