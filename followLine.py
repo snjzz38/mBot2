@@ -35,6 +35,7 @@ direction = 0
 level = 0
 path = []
 
+
 def init():
     global colMatrixColIndex, colMatrixRowIndex, rowMatrixRowIndex, rowMatrixColIndex, targetX, targetY, onRow
     if colMatrixRowIndex == -1 and colMatrixColIndex == -1:
@@ -47,6 +48,7 @@ def init():
         targetY = [colMatrixColIndex, colMatrixColIndex+1]
 
 def follow_the_line(num):
+    global direction, x, y
     sensor = 0
     base_power = 30
     kp = 0.1
@@ -75,9 +77,18 @@ def follow_the_line(num):
             
     mbot2.drive_power(-1, 0)
     #cyberpi.console.println(step)
+    if direction == 0:
+        x += num
+    elif direction == 1:
+        x -= num
+    elif direction == 2:
+        y -= num
+    elif direction == 3:
+        y += num
+
 
 def back_to_base(path):
-    global direction 
+    global direction
     route = path[::-1]
     for i in range(len(route)-1):
         if route[i][0] == route[i+1][0]:
@@ -120,6 +131,15 @@ def back_to_base(path):
                 direction = 1
             cyberpi.console.println(diff)
             follow_the_line(diff)
+    
+    cyberpi.led.set_bri(500)
+    cyberpi.led.play("flash_red")
+    cyberpi.audio.set_vol(50)
+    cyberpi.audio.play("wow")
+    time.sleep(3)
+    cyberpi.led.off(id = "all")
+    cyberpi.audio.set_vol(0)
+
 
 def detect_obstacles():
     global x, y, rows, columns, direction
@@ -128,7 +148,7 @@ def detect_obstacles():
         mbot2.straight(-8)
         distance = mbuild.ultrasonic2.get(1)
         mbot2.straight(8)
-    #cyberpi.console.println(distance)
+    cyberpi.console.println(distance)
     offset = -1
     if distance > 0 and distance < 25.6:
         offset = 0
@@ -136,61 +156,80 @@ def detect_obstacles():
         offset = 1
     elif distance > 61.8 and distance < 98:
         offset = 2
-    elif distance > 98 and distance < 134.2:
+    elif distance > 98 and distance < 134.2 and direction <= 1: 
         offset = 3
-    elif distance > 134.2 and distance < 170.4:
+    elif distance > 134.2 and distance < 170.4 and direction <= 1:
         offset = 4
-    elif distance > 170.4 and distance < 206.6:
+    elif distance > 170.4 and distance < 206.6 and direction <= 1:
         offset = 5
-    if direction == 0 or direction == 1:
+ 
+    if direction == 0:
         if offset == -1:
             for i in range(6-x):
-                rows[y][i+x] = 0
-    elif direction == 2 or direction == 3:
-        if offset == -1 or offset >= 3:
+                rows[y][x+i] = 0
+        elif offset >= 0 and x+offset < 6:
+            for i in range(offset+1):
+                if i < offset:
+                    rows[y][i+x] = 0
+                else:
+                    rows[y][i+x] = 1
+        elif x+offset >= 6:
+            offset = -1
+            for i in range(6-x):
+                rows[y][x+i] = 0
+
+    elif direction == 1:
+        if offset == -1:
+            for i in range(x):
+                rows[y][i] = 0
+        elif offset >= 0 and offset < x:
+            for i in range(offset+1):
+                if i < offset:
+                    rows[y][x-i-1] = 0
+                else:
+                    rows[y][x-i-1] = 1
+        elif offset >= x:
+            offset = -1
+            for i in range(x):
+                rows[y][i] = 0
+
+    elif direction == 2:
+        if offset == -1:
+            for i in range(y):
+                columns[x][i] = 0
+        elif offset >= 0 and offset < y:
+            for i in range(offset+1):
+                if i < offset:
+                    columns[x][y-i-1] = 0
+                else:
+                    columns[x][y-i-1] = 1
+        elif offset >= y:
+            offset = -1
+            for i in range(y):
+                columns[x][i] = 0
+
+    elif direction == 3:
+        if offset == -1:
+            for i in range(3-y):
+                columns[x][y+i] = 0
+        elif offset >= 0 and y+offset < 3:
+            for i in range(offset+1):
+                if i < offset:
+                    columns[x][y+i] = 0
+                else:
+                    columns[x][y+i] = 1
+        elif y+offset >= 3:
             offset = -1
             for i in range(3-y):
-                columns[x][i+y] = 0
-        
+                columns[x][y+i] = 0
+
     cyberpi.console.println(offset)
-    
-    if direction == 0 and x < 6 and offset >= 0:
-        for i in range(offset+1):
-            if i < offset:
-                rows[y][i+x] = 0
-            else:
-                rows[y][i+x] = 1
-        #cyberpi.console.println(rows[y])
-                
-    elif direction == 1 and x > 0 and offset >= 0:
-        for i in range(offset+1):
-            if i < offset:
-                rows[y][x-i-1] = 0
-            else:
-                rows[y][x-i-1] = 1
-        #cyberpi.console.println(rows[y])
 
-    elif direction == 2 and y > 0 and offset >= 0:
-        for i in range(offset+1):
-            if i < offset:
-                columns[x][y-i-1] = 0
-            else:
-                columns[x][y-i-1] = 1
-        #cyberpi.console.println(columns[x])
-
-    elif direction == 3 and y < 3 and offset >= 0:
-        for i in range(offset+1):
-            if i < offset:
-                columns[x][i+y] = 0
-            else:
-                columns[x][i+y] = 1
-        #cyberpi.console.println(columns[x])
 
 def maketurn(new_direction):
     global direction
     cyberpi.console.print(direction)
     if new_direction == 0:
-        cyberpi.console.println(" to Right")
         if direction == 1:
             mbot2.turn(180)
         elif direction == 2:
@@ -199,7 +238,6 @@ def maketurn(new_direction):
             mbot2.turn(-90)
 
     elif new_direction == 1:
-        cyberpi.console.println(" to Left")
         if direction == 0:
             mbot2.turn(180)
         elif direction == 2:
@@ -208,7 +246,6 @@ def maketurn(new_direction):
             mbot2.turn(90)
 
     elif new_direction == 2:
-        cyberpi.console.println(" to Up")
         if direction == 0:
             mbot2.turn(-90)
         elif direction == 1:
@@ -217,7 +254,6 @@ def maketurn(new_direction):
             mbot2.turn(180)
 
     elif new_direction == 3:
-        cyberpi.console.println(" to Down")
         if direction == 0:
             mbot2.turn(90)
         elif direction == 1:
@@ -227,19 +263,71 @@ def maketurn(new_direction):
 
     direction = new_direction
 
+def pick_up_group(x, y):
+    global targetX, targetY, direction, onRow
+    found = False
+    if onRow:
+        if x == targetX[0] and y == targetY:
+            if direction == 2:
+                mbot2.turn(90)
+            elif direction == 3:
+                mbot2.turn(-90)
+            direction = 0
+            found = True
+        elif x == targetX[1] and y == targetY:
+            if direction == 2:
+                mbot2.turn(-90)
+            elif direction == 3:
+                mbot2.turn(90)
+            direction = 1
+            found = True
+    else:
+        if x == targetX and y == targetY[0]:
+            if direction == 0:
+                mbot2.turn(90)
+            elif direction == 1:
+                mbot2.turn(-90)
+            direction = 3
+            found = True
+        elif x == targetX and y == targetY[1]:
+            if direction == 0:
+                mbot2.turn(-90)
+            elif direction == 1:
+                mbot2.turn(90)
+            direction = 2
+            found = True
+    if found:
+        cyberpi.led.set_bri(500)
+        cyberpi.led.play("meteor_green")
+        cyberpi.audio.set_vol(75)
+        cyberpi.audio.play("yeah")
+        time.sleep(3)
+        cyberpi.led.off(id = "all")
+        cyberpi.audio.set_vol(0)
+
+    return found 
+
+def path_processing(path):
+    newPath = []
+
+    for i in range(len(path)):
+        if i == 0 or i == len(path)-1:
+            newPath.append(path[i])
+        elif (path[i-1][0] == path[i][0] and path[i][0] != path[i+1][0]) or (path[i-1][1] == path[i][1] and path[i][1] != path[i+1][1]):
+            newPath.append(path[i])
+    return newPath
+
+
 def find_survivor_group(x, y, level):
-    global targetX, targetY, path, onRow, rows, columns
+    global path, rows, columns
     path.append((x, y))
     
-    if onRow:
-        if x in targetX and y == targetY:
-            #print(path)
-            return 1
-    else:
-        if x == targetX and y in targetY:
-            #print(path)
-            return 1
-    
+    if pick_up_group(x, y) == True:
+        cyberpi.console.println(path)
+        # newPath = path_processing(path)
+        back_to_base(path)
+        return 1
+
     #right    
     if (x < 6):
         if rows[y][x] == -1:
@@ -248,7 +336,7 @@ def find_survivor_group(x, y, level):
         if rows[y][x] == 0:
             follow_the_line(1) 
             if (x+1, y) not in path:
-                cyberpi.console.println("-> Right")
+                #cyberpi.console.println("-> Right")
                 if find_survivor_group(x+1, y, level+1) == 1:
                     return 1
 
@@ -256,11 +344,12 @@ def find_survivor_group(x, y, level):
     if (y < 3):
         if columns[x][y] == -1:
             maketurn(3)
+            cyberpi.console.println("ghjsz")
             detect_obstacles()
         if columns[x][y] == 0:
             follow_the_line(1)
             if (x, y+1) not in path:
-                cyberpi.console.println("-> Down")
+                #cyberpi.console.println("-> Down")
                 if find_survivor_group(x, y+1, level+1) == 1:
                     return 1
 
@@ -272,7 +361,7 @@ def find_survivor_group(x, y, level):
         if rows[y][x-1] == 0:
             follow_the_line(1)
             if (x-1, y) not in path:
-                cyberpi.console.println("-> Left")
+                #cyberpi.console.println("-> Left")
                 if find_survivor_group(x-1, y, level+1) == 1:
                     return 1
 
@@ -284,7 +373,7 @@ def find_survivor_group(x, y, level):
         if columns[x][y-1] == 0:
             follow_the_line(1)
             if (x, y-1) not in path:
-                cyberpi.console.println("-> Up")
+                #cyberpi.console.println("-> Up")
                 if find_survivor_group(x, y-1, level+1) == 1:
                     return 1
 
@@ -308,6 +397,10 @@ def b_is_pressed():
     cyberpi.stop_other()
     cyberpi.console.println('Stop Line Follower...')
     cyberpi.mbot2.drive_power(0, 0)
+
+
+
+
 
 
 
