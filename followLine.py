@@ -9,10 +9,9 @@ columns = [[-1 for j in range(3)] for i in range(7)]
 
 rowMatrixRowIndex = -1
 rowMatrixColIndex = -1
-colMatrixRowIndex = 4
+colMatrixRowIndex = 0
 colMatrixColIndex = 2
-
-xBoundary = 5
+xBoundary = 6
 
 targetX = -1
 targetY = -1 
@@ -142,109 +141,24 @@ def detect_obstacles():
         for i in range(5):
             distance = mbuild.ultrasonic2.get(1)
         mbot2.straight(5)
-    #cyberpi.console.println(distance)
-    offset = 0
+    # cyberpi.console.println(distance)
+    offset = -1
     if distance > 0 and distance < 25.6:
+        offset = 0
+    elif distance > 25.6 and distance < 61.8:
         offset = 1
+    elif distance > 61.8 and distance < 98:
+        offset = 2
+
     if direction == 0:
-        rows[y][x] = offset
+        rows[y][x] = (offset==0)
     elif direction == 1:
-        rows[y][x-1] = offset
+        rows[y][x-1] = (offset==0)
     elif direction == 2:
-        columns[x][y-1] = offset
+        columns[x][y-1] = (offset==0)
     elif direction == 3:
-        columns[x][y] = offset
+        columns[x][y] = (offset==0)
     return offset
-
-# def detect_obstacles():
-#     global x, y, rows, columns, direction
-#     cyberpi.console.print("DIR=")
-#     cyberpi.console.println(direction)
-#     cyberpi.console.print("dis=")
-#     for i in range(10):
-#         distance = mbuild.ultrasonic2.get(1)
-#     if distance == 300.0:
-#         mbot2.straight(-5)
-#         for i in range(10):
-#             distance = mbuild.ultrasonic2.get(1)
-#         mbot2.straight(5)
-#     cyberpi.console.println(distance)
-#     offset = -1
-#     if distance > 0 and distance < 25.6:
-#         offset = 0
-#     elif distance > 25.6 and distance < 61.8:
-#         offset = 1
-#     elif distance > 61.8 and distance < 98:
-#         offset = 2
-#     elif distance > 98 and distance < 134.2 and direction <= 1: 
-#         offset = 3
-#     elif distance > 134.2 and distance < 170.4 and direction <= 1:
-#         offset = 4
-#     elif distance > 170.4 and distance < 206.6 and direction <= 1:
-#         offset = 5
- 
-#     if direction == 0:
-#         if offset == -1:
-#             for i in range(6-x):
-#                 rows[y][x+i] = 0
-#         elif offset >= 0 and x+offset < 6:
-#             for i in range(offset+1):
-#                 if i < offset:
-#                     rows[y][i+x] = 0
-#                 else:
-#                     rows[y][i+x] = 1
-#         elif x+offset >= 6:
-#             offset = -1
-#             for i in range(6-x):
-#                 rows[y][x+i] = 0
-
-#     elif direction == 1:
-#         if offset == -1:
-#             for i in range(x):
-#                 rows[y][i] = 0
-#         elif offset >= 0 and offset < x:
-#             for i in range(offset+1):
-#                 if i < offset:
-#                     rows[y][x-i-1] = 0
-#                 else:
-#                     rows[y][x-i-1] = 1
-#         elif offset >= x:
-#             offset = -1
-#             for i in range(x):
-#                 rows[y][i] = 0
-
-#     elif direction == 2:
-#         if offset == -1:
-#             for i in range(y):
-#                 columns[x][i] = 0
-#         elif offset >= 0 and offset < y:
-#             for i in range(offset+1):
-#                 if i < offset:
-#                     columns[x][y-i-1] = 0
-#                 else:
-#                     columns[x][y-i-1] = 1
-#         elif offset >= y:
-#             offset = -1
-#             for i in range(y):
-#                 columns[x][i] = 0
-
-#     elif direction == 3:
-#         if offset == -1:
-#             for i in range(3-y):
-#                 columns[x][y+i] = 0
-#         elif offset >= 0 and y+offset < 3:
-#             for i in range(offset+1):
-#                 if i < offset:
-#                     columns[x][y+i] = 0
-#                 else:
-#                     columns[x][y+i] = 1
-#         elif y+offset >= 3:
-#             offset = -1
-#             for i in range(3-y):
-#                 columns[x][y+i] = 0
-
-#     cyberpi.console.println(offset)
-
 
 def maketurn(new_direction):
     global direction
@@ -324,7 +238,7 @@ def pick_up_group(x, y):
         cyberpi.led.show("green green green green green")
         cyberpi.audio.set_vol(75)
         cyberpi.audio.play("yeah")
-        time.sleep(3)
+        time.sleep(2)
         cyberpi.led.off(id = "all")
         cyberpi.audio.set_vol(0)
 
@@ -332,118 +246,400 @@ def pick_up_group(x, y):
 
 def path_processing(path):
     newPath = []
+    newPath.append(path[0])
+    for i in range(len(path)-1):
 
-    for i in range(len(path)):
-        if i == 0 or i == len(path)-1:
-            newPath.append(path[i])
-        elif (path[i-1][0] == path[i][0] and path[i][0] != path[i+1][0]) or (path[i-1][1] == path[i][1] and path[i][1] != path[i+1][1]):
-            newPath.append(path[i])
+        if path[i][0] == path[i+1][0]:
+            delta = path[i+1][1]-path[i][1]
+            if delta == 1 or delta == -1:
+                newPath.append(path[i+1])
+            else:
+                value = path[i][1]
+                for j in range(abs(delta)-1):
+                    if delta > 0:
+                        value+=1
+                        newPath.append( (path[i][0], value) )
+                    elif delta < 0:
+                        value-=1
+                        newPath.append( (path[i][0], value) )
+                newPath.append(path[i+1])
+        
+        elif path[i][1] == path[i+1][1]:
+            delta = path[i+1][0]-path[i][0]
+            if delta == 1 or delta == -1:
+                newPath.append(path[i+1])
+            else:
+                value = path[i][0]
+                for j in range(abs(delta)-1):
+                    if delta > 0:
+                        value+=1
+                        newPath.append( (value, path[i][1]) )
+                    elif delta < 0:
+                        value-=1
+                        newPath.append( (value, path[i][1]) )
+                newPath.append(path[i+1])            
+
     return newPath
+
 
 def find_shortcut(x, y):
     global targetX, targetY, direction, onRow
     originalDirection = direction
     newDirection = -1
+    steps = -1
+    moves = 1
     if onRow:
-        if x==targetX[0] and y == targetY-1:
+        # three steps
+        if x==targetX[0] and y==targetY-3:
             maketurn(3)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 2 or steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 3
-        elif x==targetX[0]-1 and y==targetY:
+                moves = 3
+
+        elif x==targetX[0]-3 and y==targetY:
             maketurn(0)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 2 or steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 0
-        elif x==targetX[0] and y == targetY+1:
+                moves = 3
+
+        elif x==targetX[0] and y==targetY+3:
             maketurn(2)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 2 or steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 2
-        elif x==targetX[1] and y==targetY-1:
+                moves = 3
+
+        elif x==targetX[1] and y==targetY-3:
             maketurn(3)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 2 or steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 3
-        elif x==targetX[1]+1 and y==targetY:
+                moves = 3
+
+        elif x==targetX[1]+3 and y==targetY:
             maketurn(1)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 2 or steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 1
-        elif x==targetX[1] and y==targetY+1:
+                moves = 3
+
+        elif x==targetX[1] and y==targetY+3:
             maketurn(2)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 2 or steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 2
-    else:
-        if x==targetX and y==targetY[0]-1:
+                moves = 3
+
+        # two steps
+        elif x==targetX[0] and y==targetY-2:
             maketurn(3)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
                 maketurn(originalDirection)
             else:
                 newDirection = 3
+                moves = 2
+
+        elif x==targetX[0]-2 and y==targetY:
+            maketurn(0)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 0
+                moves = 2
+
+        elif x==targetX[0] and y==targetY+2:
+            maketurn(2)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 2
+                moves = 2
+
+        elif x==targetX[1] and y==targetY-2:
+            maketurn(3)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 3
+                moves = 2
+
+        elif x==targetX[1]+2 and y==targetY:
+            maketurn(1)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 1
+                moves = 2
+
+        elif x==targetX[1] and y==targetY+2:
+            maketurn(2)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 2
+                moves = 2
+
+        # one step
+        elif x==targetX[0] and y == targetY-1:
+            maketurn(3)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 3
+
+        elif x==targetX[0]-1 and y==targetY:
+            maketurn(0)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 0
+
+        elif x==targetX[0] and y == targetY+1:
+            maketurn(2)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 2
+
+        elif x==targetX[1] and y==targetY-1:
+            maketurn(3)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 3
+                
+        elif x==targetX[1]+1 and y==targetY:
+            maketurn(1)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 1
+
+
+        elif x==targetX[1] and y==targetY+1:
+            maketurn(2)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 2
+
+
+    else:
+
+        # three steps 
+        if x==targetX-3 and y==targetY[0]:
+            maketurn(0)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 0
+                moves = 3
+
+        elif x==targetX+3 and y==targetY[0]:
+            maketurn(1)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 1
+                moves = 3
+
+        elif x==targetX-3 and y==targetY[1]:
+            maketurn(0)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 0
+                moves = 3
+
+        elif x==targetX+3 and y==targetY[1]:
+            maketurn(1)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 1
+                moves = 3
+
+        # two steps
+        elif x==targetX and y==targetY[0]-2:
+            maketurn(3)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 3
+                moves = 2
+
+        elif x == targetX-2 and y == targetY[0]:
+            maketurn(0)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 0
+                moves = 2 
+        
+        elif x == targetX+2 and y == targetY[0]:
+            maketurn(1)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 1
+                moves = 2
+                
+        elif x == targetX-2 and y == targetY[1]:
+            maketurn(0)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 0
+                moves = 2 
+
+        elif x == targetX+2 and y == targetY[1]:
+            maketurn(1)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 1
+                moves = 2 
+
+        elif x == targetX and y == targetY[1]+2:
+            maketurn(2)
+            steps = detect_obstacles()
+            if steps == 1 or steps == 0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 2
+                moves = 2 
+
+        # one step
+        elif x==targetX and y==targetY[0]-1:
+            maketurn(3)
+            steps = detect_obstacles()
+            if steps==0:
+                maketurn(originalDirection)
+            else:
+                newDirection = 3
+
         elif x==targetX-1 and y==targetY[0]:
             maketurn(0)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps==0:
                 maketurn(originalDirection)
             else:
                 newDirection = 0
         elif x==targetX+1 and y==targetY[0]:
             maketurn(1)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps==0:
                 maketurn(originalDirection)
             else:
                 newDirection = 1
         elif x==targetX and y==targetY[1]+1:
             maketurn(2)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps==0:
                 maketurn(originalDirection)
             else:
                 newDirection = 2
         elif x==targetX-1 and y==targetY[1]:
             maketurn(0)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps==0:
                 maketurn(originalDirection)
             else:
                 newDirection = 0
         elif x==targetX+1 and y==targetY[1]:
             maketurn(1)
-            if detect_obstacles()==1:
+            steps = detect_obstacles()
+            if steps==0:
                 maketurn(originalDirection)
             else:
                 newDirection = 1
+    # cyberpi.console.println(newDirection)
     if newDirection != -1:
-        follow_the_line(1)
-    return newDirection
+        for i in range(moves):
+            follow_the_line(1)
+    return (newDirection, moves)
 
 def find_survivor_group(x, y, level):
     global path, rows, columns
     path.append((x, y))
     
     if pick_up_group(x, y) == True:
-        #cyberpi.console.println(path)
-        #newPath = path_processing(path)
-        back_to_path(path)
+        newPath = path_processing(path)
+        # cyberpi.console.println(path)
+        back_to_path(newPath)
         return 1
 
-    shortcut = find_shortcut(x, y)
-    if shortcut == 0:
+    (shortcut, moves) = find_shortcut(x, y)
+    if shortcut == 0 and moves == 1:
         if find_survivor_group(x+1, y, level+1) == 1:
             return 1
-    elif shortcut == 1:
+    elif shortcut == 1 and moves == 1:
         if find_survivor_group(x-1, y, level+1) == 1:
             return 1
-    elif shortcut == 2:
+    elif shortcut == 2 and moves == 1:
         if find_survivor_group(x, y-1, level+1) == 1:
             return 1
-    elif shortcut == 3:
+    elif shortcut == 3 and moves == 1:
         if find_survivor_group(x, y+1, level+1) == 1:
+            return 1
+    elif shortcut == 0 and moves == 2:
+        if find_survivor_group(x+2, y, level+1) == 1:
+            return 1
+    elif shortcut == 1 and moves == 2:
+        if find_survivor_group(x-2, y, level+1) == 1:
+            return 1
+    elif shortcut == 2 and moves == 2:
+        if find_survivor_group(x, y-2, level+1) == 1:
+            return 1
+    elif shortcut == 3 and moves == 2:
+        if find_survivor_group(x, y+2, level+1) == 1:
+            return 1
+    elif shortcut == 0 and moves == 3:
+        if find_survivor_group(x+3, y, level+1) == 1:
+            return 1
+    elif shortcut == 1 and moves == 3:
+        if find_survivor_group(x-3, y, level+1) == 1:
+            return 1
+    elif shortcut == 2 and moves == 3:
+        if find_survivor_group(x, y-3, level+1) == 1:
+            return 1
+    elif shortcut == 3 and moves == 3:
+        if find_survivor_group(x, y+3, level+1) == 1:
             return 1
 
     #right    
@@ -472,19 +668,6 @@ def find_survivor_group(x, y, level):
                 if find_survivor_group(x, y+1, level+1) == 1:
                     return 1
 
-    #up
-    if (y > 0):
-        if (x, y-1) not in path:
-            if columns[x][y-1] == -1:
-                maketurn(2)
-                detect_obstacles()
-            if columns[x][y-1] == 0:
-                maketurn(2)
-                #cyberpi.console.println("-> Up")
-                follow_the_line(1)
-                if find_survivor_group(x, y-1, level+1) == 1:
-                    return 1
-
     #left
     if (x > 0):
         if (x-1, y) not in path:
@@ -498,12 +681,25 @@ def find_survivor_group(x, y, level):
                 if find_survivor_group(x-1, y, level+1) == 1:
                     return 1
 
+    #up
+    if (y > 0):
+        if (x, y-1) not in path:
+            if columns[x][y-1] == -1:
+                maketurn(2)
+                detect_obstacles()
+            if columns[x][y-1] == 0:
+                maketurn(2)
+                #cyberpi.console.println("-> Up")
+                follow_the_line(1)
+                if find_survivor_group(x, y-1, level+1) == 1:
+                    return 1
+
     temp = []
     temp.append(path[-2])
     temp.append(path[-1])
     #cyberpi.console.println(temp)
     back_to_path(temp)
-    cyberpi.audio.play("drop")
+    # cyberpi.audio.play("drop")
     path.pop()
     return 0
 
@@ -524,4 +720,10 @@ def b_is_pressed():
     cyberpi.stop_other()
     cyberpi.console.println('Stop ...')
     cyberpi.mbot2.drive_power(0, 0)
+
+
+
+
+
+
 
